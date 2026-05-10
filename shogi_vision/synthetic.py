@@ -20,11 +20,20 @@ from .pieces import (
 
 _IPA_FONT_PATH = "/usr/share/fonts/opentype/ipafont-gothic/ipag.ttf"
 
-# Fallback font paths (in order of preference)
+# Fallback font paths in order of preference.
+# Includes Linux (IPAGothic / WQY) and macOS (Hiragino / PingFang) defaults.
 _FONT_CANDIDATES = [
     _IPA_FONT_PATH,
     "/usr/share/fonts/truetype/fonts-japanese-gothic.ttf",
     "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+    # macOS — Hiragino is the standard Japanese font shipped with the OS
+    "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",
+    "/System/Library/Fonts/ヒラギノ角ゴシック W6.ttc",
+    "/System/Library/Fonts/Hiragino Sans GB.ttc",
+    "/Library/Fonts/Hiragino Sans GB.ttc",
+    "/System/Library/Fonts/PingFang.ttc",
+    "/System/Library/Fonts/Supplemental/PingFang.ttc",
+    "/Library/Fonts/Arial Unicode.ttf",
 ]
 
 
@@ -32,7 +41,10 @@ def _get_font(size: int) -> ImageFont.FreeTypeFont:
     for path in _FONT_CANDIDATES:
         if Path(path).exists():
             return ImageFont.truetype(path, size)
-    return ImageFont.load_default()
+    raise RuntimeError(
+        "No CJK font found. Install IPAGothic (Linux) or rely on Hiragino "
+        "(macOS). Tried: " + ", ".join(_FONT_CANDIDATES)
+    )
 
 
 def render_board(board: Board, size: int = 900) -> np.ndarray:
