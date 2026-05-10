@@ -51,6 +51,12 @@ def _is_empty(cell: np.ndarray) -> bool:
     return float(gray.std()) < EMPTY_STD_THRESHOLD
 
 
+def _binarize(gray: np.ndarray) -> np.ndarray:
+    """Otsu binarisation — returns 0/255 image robust to background colour."""
+    _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    return binary
+
+
 def _rot180(img: np.ndarray) -> np.ndarray:
     return cv2.rotate(img, cv2.ROTATE_180)
 
@@ -168,7 +174,7 @@ class TemplateClassifier:
                 sfen = piece_for_player(pt, player)
                 tmpl = render_single_piece(sfen, cell_size=self._cell_size)
                 gray = cv2.cvtColor(tmpl, cv2.COLOR_BGR2GRAY)
-                self._templates.append((sfen, gray))
+                self._templates.append((sfen, _binarize(gray)))
 
     def classify(self, cell: np.ndarray) -> Optional[str]:
         if _is_empty(cell):
@@ -180,7 +186,7 @@ class TemplateClassifier:
         pad = max(2, self._cell_size // 50)
         cell_inner = cell_resized[pad:-pad, pad:-pad]
         cell_inner = cv2.resize(cell_inner, (self._cell_size, self._cell_size))
-        gray = cv2.cvtColor(cell_inner, cv2.COLOR_BGR2GRAY)
+        gray = _binarize(cv2.cvtColor(cell_inner, cv2.COLOR_BGR2GRAY))
 
         best_score = -1.0
         best_sfen: Optional[str] = None
