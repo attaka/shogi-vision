@@ -175,7 +175,12 @@ class TemplateClassifier:
             return None
 
         cell_resized = cv2.resize(cell, (self._cell_size, self._cell_size))
-        gray = cv2.cvtColor(cell_resized, cv2.COLOR_BGR2GRAY)
+        # Strip the outermost pixels to remove grid-line contamination.
+        # Real and synthetic boards both have grid lines at cell boundaries.
+        pad = max(2, self._cell_size // 50)
+        cell_inner = cell_resized[pad:-pad, pad:-pad]
+        cell_inner = cv2.resize(cell_inner, (self._cell_size, self._cell_size))
+        gray = cv2.cvtColor(cell_inner, cv2.COLOR_BGR2GRAY)
 
         best_score = -1.0
         best_sfen: Optional[str] = None

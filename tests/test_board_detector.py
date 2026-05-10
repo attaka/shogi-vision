@@ -38,3 +38,29 @@ def test_board_with_border():
                                    cv2.BORDER_CONSTANT, value=[255, 255, 255])
     result = detect_board(bordered)
     assert result.shape == (BOARD_OUTPUT_SIZE, BOARD_OUTPUT_SIZE, 3)
+
+
+def test_board_with_side_panel():
+    """An image with a captured-pieces panel on the right (持ち駒 area)
+    must still isolate the 9x9 board grid — the pipeline should reproduce
+    INITIAL_SFEN.
+    """
+    import cv2
+    from shogi_vision.pieces import INITIAL_SFEN, initial_board
+    from shogi_vision.synthetic import render_board
+    from shogi_vision.pipeline import image_to_sfen
+    from shogi_vision.piece_classifier import TemplateClassifier
+
+    board, *_ = initial_board()
+    board_img = render_board(board, size=700)
+    h, w = board_img.shape[:2]
+
+    # Compose: board on left, blank panel + framed box on right
+    panel_w = 220
+    canvas = np.full((h, w + panel_w, 3), 240, dtype=np.uint8)
+    canvas[:, :w] = board_img
+    cv2.rectangle(canvas, (w + 30, 60), (w + 190, 280), (0, 0, 0), 2)
+
+    clf = TemplateClassifier(cell_size=100)
+    sfen = image_to_sfen(canvas, classifier=clf)
+    assert sfen == INITIAL_SFEN

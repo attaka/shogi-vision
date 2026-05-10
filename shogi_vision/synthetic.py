@@ -76,7 +76,7 @@ def render_board(board: Board, size: int = 900) -> np.ndarray:
     img = Image.new("RGB", (size, size), color=(255, 255, 255))
     draw = ImageDraw.Draw(img)
 
-    # Draw grid lines
+    # Draw grid lines first
     for i in range(BOARD_RANKS + 1):
         y = i * cell
         draw.line([(0, y), (size, y)], fill=(0, 0, 0), width=2)
@@ -84,7 +84,9 @@ def render_board(board: Board, size: int = 900) -> np.ndarray:
         x = j * cell
         draw.line([(x, 0), (x, size)], fill=(0, 0, 0), width=2)
 
-    # Draw pieces
+    # Draw pieces — paste only dark (kanji) pixels using a luminance mask
+    # so the grid lines underneath are preserved
+    _black = Image.new("RGB", (cell, cell), color=(0, 0, 0))
     for rank_idx in range(BOARD_RANKS):
         for file_idx in range(BOARD_FILES):
             piece = board[rank_idx][file_idx]
@@ -95,11 +97,10 @@ def render_board(board: Board, size: int = 900) -> np.ndarray:
             kanji = PIECE_TO_KANJI.get(ptype, "？")
             owner = player_of(piece)
 
-            # Render kanji into a temporary cell-sized image
+            # Render kanji on a white cell — only dark pixels will be pasted
             cell_img = Image.new("RGB", (cell, cell), color=(255, 255, 255))
             cdraw = ImageDraw.Draw(cell_img)
 
-            # Measure text to center it
             bbox = cdraw.textbbox((0, 0), kanji, font=font)
             tw = bbox[2] - bbox[0]
             th = bbox[3] - bbox[1]
@@ -107,14 +108,14 @@ def render_board(board: Board, size: int = 900) -> np.ndarray:
             ty = (cell - th) // 2 - bbox[1]
             cdraw.text((tx, ty), kanji, fill=(0, 0, 0), font=font)
 
-            # White pieces are rotated 180°
             if owner == Player.WHITE:
                 cell_img = cell_img.rotate(180)
 
-            # Paste into main image
-            x0 = file_idx * cell
-            y0 = rank_idx * cell
-            img.paste(cell_img, (x0, y0))
+            # mask: bright where the kanji is dark → paste only those pixels
+            mask = Image.fromarray(
+                (255 - np.array(cell_img.convert("L"))).astype(np.uint8)
+            )
+            img.paste(_black, (file_idx * cell, rank_idx * cell), mask=mask)
 
     return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
