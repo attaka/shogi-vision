@@ -1,0 +1,43 @@
+"""End-to-end pipeline test with synthetic board image."""
+from __future__ import annotations
+
+import pytest
+
+from shogi_vision.pieces import INITIAL_SFEN, initial_board
+from shogi_vision.pipeline import image_to_sfen
+from shogi_vision.piece_classifier import TemplateClassifier
+from shogi_vision.synthetic import render_board
+
+
+@pytest.fixture(scope="module")
+def initial_image():
+    board, *_ = initial_board()
+    return render_board(board, size=900)
+
+
+@pytest.fixture(scope="module")
+def clf():
+    return TemplateClassifier(cell_size=100)
+
+
+def test_initial_position_sfen(initial_image, clf):
+    """Pipeline must reproduce INITIAL_SFEN from a synthetic rendering."""
+    result = image_to_sfen(initial_image, classifier=clf)
+    assert result == INITIAL_SFEN
+
+
+def test_empty_board_pipeline():
+    from shogi_vision.pieces import empty_board, Player
+    board = empty_board()
+    img = render_board(board, size=900)
+    clf = TemplateClassifier(cell_size=100)
+    result = image_to_sfen(img, classifier=clf, turn=Player.BLACK)
+    assert result == "9/9/9/9/9/9/9/9/9 b - 1"
+
+
+def test_output_is_string(initial_image, clf):
+    result = image_to_sfen(initial_image, classifier=clf)
+    assert isinstance(result, str)
+    parts = result.split()
+    assert len(parts) == 4
+    assert parts[1] in ("b", "w")
