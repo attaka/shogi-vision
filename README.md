@@ -20,9 +20,9 @@ pip install -e .[dev]
 ## CLI
 
 ```bash
-shogi-vision <image>                       # 自動 (Tesseract が利用可能ならそちら)
+shogi-vision <image>                       # 自動 (TemplateClassifier)
 shogi-vision <image> --classifier template # IPAGothic テンプレマッチ (合成画像向け)
-shogi-vision <image> --classifier tesseract
+shogi-vision <image> --classifier tesseract # Tesseract OCR を明示指定
 shogi-vision <image> --turn w --move 42    # SFEN メタ情報を上書き
 shogi-vision <image> --debug overlay.png   # 検出結果をオーバレイ表示
 ```
@@ -81,7 +81,7 @@ TemplateClassifier 経由で全テスト (71件) が通る。
 ## 既知の制約
 
 - **Tesseract の単字認識限界**: `jpn` モデルは連続テキスト用に学習されているため、
-  孤立した漢字 (特に `王` `銀` `香` `角`) で認識精度が落ちる。確実性が必要なら
-  `--classifier template` を使用。
+  孤立した漢字 (特に `王` `銀` `香` `角`) で認識精度が落ちる。`auto` は
+  TemplateClassifier を使う。OCR 経路を試す場合だけ `--classifier tesseract` を指定。
 - **持ち駒は未対応**: SFEN の手駒部分は常に `-` を出力する。
 - **盤の向き判定なし**: 先手視点に固定。逆向きの画像は事前に回転が必要。
