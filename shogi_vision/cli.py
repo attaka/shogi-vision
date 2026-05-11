@@ -25,7 +25,7 @@ def _build_parser() -> argparse.ArgumentParser:
         default="auto",
         help=(
             "Piece classifier to use. "
-            "'auto' picks Tesseract when available, else Template. "
+            "'auto' uses Template by default; use 'tesseract' explicitly for OCR. "
             "Default: auto"
         ),
     )
