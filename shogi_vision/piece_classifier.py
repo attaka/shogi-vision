@@ -7,7 +7,8 @@ Two concrete implementations are provided:
 * ``TemplateClassifier`` — uses OpenCV template matching against kanji images
   generated from IPAGothic at startup (no external binary needed).
 
-Use ``auto_classifier()`` to get the best available classifier automatically.
+Use ``auto_classifier()`` for the production default. It currently prefers
+template matching because single-kanji OCR is noisy on digital shogi pieces.
 """
 from __future__ import annotations
 
@@ -196,14 +197,12 @@ class TemplateClassifier:
 # ── factory ───────────────────────────────────────────────────────────────────
 
 def auto_classifier(cell_size: int = 100) -> Classifier:
-    """Return the best available classifier.
+    """Return the default classifier for digital shogi boards.
 
-    Uses ``TesseractClassifier`` if the ``tesseract`` binary is on PATH,
-    otherwise falls back to ``TemplateClassifier``.
+    ``TesseractClassifier`` remains available through ``--classifier
+    tesseract``, but it is not the automatic default: Japanese OCR models are
+    tuned for text lines, and isolated shogi glyphs produce unstable results in
+    practice. Template matching is deterministic for the app/screenshot target
+    domain and keeps ``auto`` reliable even when Tesseract is installed.
     """
-    if shutil.which("tesseract"):
-        try:
-            return TesseractClassifier()
-        except RuntimeError:
-            pass
     return TemplateClassifier(cell_size=cell_size)
