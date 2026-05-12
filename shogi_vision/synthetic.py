@@ -16,6 +16,7 @@ from .pieces import (
     player_of,
     piece_type_of,
     Player,
+    sfen_to_board,
 )
 
 _IPA_FONT_PATH = "/usr/share/fonts/opentype/ipafont-gothic/ipag.ttf"
@@ -151,3 +152,91 @@ def render_single_piece(
         img = img.rotate(180)
 
     return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+
+
+def render_sfen_pretty(
+    sfen: str,
+    size: int = 900,
+    board_color: tuple[int, int, int] = (235, 197, 132),
+) -> np.ndarray:
+    """Render a cleaner board image from SFEN.
+
+    This renderer is inspired by lightweight GUI board styles (e.g. ShogiHome):
+    wood-like board background and pentagonal piece silhouettes. It is suitable
+    for generating visually clean demo images before running image->SFEN tests.
+
+    If ``cshogi`` is installed, the input SFEN is validated via ``cshogi.Board``.
+    """
+    try:
+        import cshogi  # type: ignore
+
+        b = cshogi.Board()
+        b.set_sfen(sfen)
+        _ = b.sfen()
+    except Exception:
+        # Fallback: project parser validation
+        pass
+
+    board, _, _, _ = sfen_to_board(sfen)
+    cell = size // BOARD_RANKS
+    font_size = int(cell * 0.44)
+    font = _get_font(font_size)
+
+    img = Image.new("RGBA", (size, size), color=(*board_color, 255))
+    # NOTE: RGBA is required for alpha_composite with RGBA piece layers.
+    draw = ImageDraw.Draw(img)
+
+    # grid
+    for i in range(BOARD_RANKS + 1):
+        y = i * cell
+        draw.line([(0, y), (size, y)], fill=(45, 35, 20), width=2)
+    for j in range(BOARD_FILES + 1):
+        x = j * cell
+        draw.line([(x, 0), (x, size)], fill=(45, 35, 20), width=2)
+
+    margin = int(cell * 0.08)
+
+    for rank_idx in range(BOARD_RANKS):
+        for file_idx in range(BOARD_FILES):
+            piece = board[rank_idx][file_idx]
+            if not piece:
+                continue
+
+            owner = player_of(piece)
+            ptype = piece_type_of(piece)
+            kanji = PIECE_TO_KANJI.get(ptype, "？")
+
+            x0 = file_idx * cell + margin
+            y0 = rank_idx * cell + margin
+            x1 = (file_idx + 1) * cell - margin
+            y1 = (rank_idx + 1) * cell - margin
+            cx = (x0 + x1) // 2
+
+            # simple pentagonal shogi piece silhouette
+            poly = [
+                (cx, y0),
+                (x1, y0 + int(cell * 0.22)),
+                (x1 - int(cell * 0.08), y1),
+                (x0 + int(cell * 0.08), y1),
+                (x0, y0 + int(cell * 0.22)),
+            ]
+
+            piece_img = Image.new("RGBA", (cell, cell), (0, 0, 0, 0))
+            pdraw = ImageDraw.Draw(piece_img)
+            local_poly = [(px - file_idx * cell, py - rank_idx * cell) for px, py in poly]
+            pdraw.polygon(local_poly, fill=(248, 232, 186), outline=(60, 45, 25), width=2)
+
+            bbox = pdraw.textbbox((0, 0), kanji, font=font)
+            tw = bbox[2] - bbox[0]
+            th = bbox[3] - bbox[1]
+            tx = (cell - tw) // 2 - bbox[0]
+            ty = int(cell * 0.38) - th // 2 - bbox[1]
+            pdraw.text((tx, ty), kanji, fill=(20, 20, 20), font=font)
+
+            if owner == Player.WHITE:
+                piece_img = piece_img.rotate(180)
+
+            # Use mask paste for compatibility across PIL versions/modes.
+            img.paste(piece_img, (file_idx * cell, rank_idx * cell), piece_img)
+
+    return cv2.cvtColor(np.array(img.convert("RGB")), cv2.COLOR_RGB2BGR)
