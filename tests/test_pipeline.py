@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 
 from shogi_vision.pieces import INITIAL_SFEN, initial_board
-from shogi_vision.pipeline import image_to_sfen
+from shogi_vision.pipeline import image_to_sfen, image_to_sfen_with_diagnostics
 from shogi_vision.piece_classifier import TemplateClassifier
 from shogi_vision.synthetic import render_board
 
@@ -41,3 +41,19 @@ def test_output_is_string(initial_image, clf):
     parts = result.split()
     assert len(parts) == 4
     assert parts[1] in ("b", "w")
+
+
+def test_diagnostics_output(initial_image, clf):
+    result = image_to_sfen_with_diagnostics(initial_image, classifier=clf)
+    assert result["sfen"] == INITIAL_SFEN
+    assert result["board_size"] == [900, 900]
+    for key in (
+        "load_image_s",
+        "detect_board_s",
+        "segment_cells_s",
+        "classify_cells_s",
+        "build_sfen_s",
+        "total_s",
+    ):
+        assert key in result["timings"]
+        assert result["timings"][key] >= 0.0
