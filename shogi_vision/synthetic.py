@@ -169,22 +169,20 @@ def render_sfen_pretty(
     """
     try:
         import cshogi  # type: ignore
-    except ImportError:
-        cshogi = None
 
-    if cshogi is not None:
-        # Fail fast on invalid SFEN when cshogi is available.
         b = cshogi.Board()
         b.set_sfen(sfen)
         _ = b.sfen()
+    except Exception:
+        # Fallback: project parser validation
+        pass
 
     board, _, _, _ = sfen_to_board(sfen)
     cell = size // BOARD_RANKS
     font_size = int(cell * 0.44)
     font = _get_font(font_size)
 
-    img = Image.new("RGBA", (size, size), color=(*board_color, 255))
-    # NOTE: RGBA is required for alpha_composite with RGBA piece layers.
+    img = Image.new("RGB", (size, size), color=board_color)
     draw = ImageDraw.Draw(img)
 
     # grid
@@ -237,7 +235,6 @@ def render_sfen_pretty(
             if owner == Player.WHITE:
                 piece_img = piece_img.rotate(180)
 
-            # Use mask paste for compatibility across PIL versions/modes.
-            img.paste(piece_img, (file_idx * cell, rank_idx * cell), piece_img)
+            img.alpha_composite(piece_img, (file_idx * cell, rank_idx * cell))
 
     return cv2.cvtColor(np.array(img.convert("RGB")), cv2.COLOR_RGB2BGR)
