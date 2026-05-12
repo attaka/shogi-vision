@@ -183,6 +183,7 @@ def render_sfen_pretty(
     font = _get_font(font_size)
 
     img = Image.new("RGBA", (size, size), color=(*board_color, 255))
+    # NOTE: RGBA is required for alpha_composite with RGBA piece layers.
     draw = ImageDraw.Draw(img)
 
     # grid
