@@ -169,13 +169,14 @@ def render_sfen_pretty(
     """
     try:
         import cshogi  # type: ignore
+    except ImportError:
+        cshogi = None
 
+    if cshogi is not None:
+        # Fail fast on invalid SFEN when cshogi is available.
         b = cshogi.Board()
         b.set_sfen(sfen)
         _ = b.sfen()
-    except Exception:
-        # Fallback: project parser validation
-        pass
 
     board, _, _, _ = sfen_to_board(sfen)
     cell = size // BOARD_RANKS
